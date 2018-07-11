@@ -13,8 +13,8 @@ type cell struct {
 	right int
 }
 
-const alive rune = 'X'
-const dead rune = '.'
+const alive = 'X'
+const dead = ' '
 
 func main() {
 	iterations := flag.Int("iterations", 20, "number of iterations")
@@ -22,10 +22,14 @@ func main() {
 	cells := flag.Int("cells", 32, "number of cells")
 	flag.Parse()
 	cellLine := make([]rune, *cells, *cells)
+	i := 0
 	initialize(cellLine)
-	for i := 0; i < *iterations; i++ {
-		printLine(cellLine)
+	printLine(cellLine)
+	i++
+	for i < *iterations {
 		update(cellLine)
+		printLine(cellLine)
+		i++
 	}
 
 
