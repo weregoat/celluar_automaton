@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"flag"
 	"time"
-	"strconv"
 )
 
 type cell struct {
@@ -14,23 +13,21 @@ type cell struct {
 	right int
 }
 
-const alive rune = '1'
-const dead rune = '0'
+const alive rune = 'X'
+const dead rune = '.'
 
 func main() {
 	iterations := flag.Int("iterations", 20, "number of iterations")
-	rule := flag.Int64("rule", 110, "rule number")
-	cells := flag.Int("cells", 10, "number of cells")
+	//rule := flag.Int64("rule", 110, "rule number")
+	cells := flag.Int("cells", 32, "number of cells")
 	flag.Parse()
 	cellLine := make([]rune, *cells, *cells)
 	initialize(cellLine)
-	fmt.Println(cellLine)
 	for i := 0; i < *iterations; i++ {
-		newLine := update(cellLine)
-		fmt.Println(newLine)
-		cellLine = newLine
+		printLine(cellLine)
+		update(cellLine)
 	}
-	generateTable(*rule)
+
 
 
 }
@@ -48,41 +45,55 @@ func initialize(cells []rune) {
 	}
 }
 
-func update(cells []rune) []rune{
+func update(cells []rune) {
 
-	next := make([]rune, len(cells), cap(cells))
-	copy(next, cells)
-	for i := range cells {
+	previous := make([]rune, len(cells), cap(cells))
+	copy(previous, cells)
+	for i := range previous {
 		var left rune
 		var center rune
 		var right rune
 		/* Special cases */
 		if i == 0 {
-			left = cells[len(cells)-1]
+			left = previous[len(previous)-1]
 		} else {
-			left = cells[i-1]
+			left = previous[i-1]
 		}
-		if i == len(cells)-1 {
-			right = cells[0]
+		if i == len(previous)-1 {
+			right = previous[0]
 		} else {
-			right = cells[i+1]
+			right = previous[i+1]
 		}
-		center = cells[i]
-		next[i] = applyRule(left, center, right)
+		center = previous[i]
+		cells[i] = applyRule(left, center, right)
 	}
-	return next
 }
 
 func applyRule(left, center, right rune) rune{
-//	newState := (center+right+center*right+left*center*right)%2
-//	return newState
-	return dead
+	a := string(alive)
+	d := string(dead)
+	state := alive
+	pattern := string(string(left) + string(center) + string(right))
+	switch pattern {
+	case string(a+a+a), string(a+d+d), string(d+d+d):
+		state = dead
+	}
+	return state
 }
 
+func printLine(cells []rune) {
+	for _,value := range cells {
+		fmt.Print(string(value))
+	}
+	fmt.Print("\n")
+}
+
+/*
 func generateTable(rule int64) map[string]rune{
 	/* Initialize the transformation table */
 	/* The key is the LCR cell combination */
 	/* The value is the center next value */
+	/*
 	table := map[string]rune {
 		"111": dead,
 		"110": dead,
@@ -101,7 +112,8 @@ func generateTable(rule int64) map[string]rune{
 	fmt.Println(string(binaryString[0]))
 	return table
 
-}
 
+}
+*/
 
 
