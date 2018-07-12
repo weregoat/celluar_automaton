@@ -21,7 +21,7 @@ func main() {
 	//rule := flag.Int64("rule", 110, "rule number")
 	cells := flag.Int("cells", 32, "number of cells")
 	flag.Parse()
-	cellLine := make([]rune, *cells, *cells)
+	cellLine := make([]int, *cells, *cells)
 	i := 0
 	initialize(cellLine)
 	printLine(cellLine)
@@ -36,27 +36,27 @@ func main() {
 
 }
 
-func initialize(cells []rune) {
+func initialize(cells []int) {
 	seed := rand.NewSource(time.Now().UnixNano())
 	randomiser := rand.New(seed)
 	for i := range cells {
 		state := randomiser.Intn(2)
 		if state == 0 {
-			cells[i] = dead
+			cells[i] = 0
 		} else {
-			cells[i] = alive
+			cells[i] = 1
 		}
 	}
 }
 
-func update(cells []rune) {
+func update(cells []int) {
 
-	previous := make([]rune, len(cells), cap(cells))
+	previous := make([]int, len(cells), cap(cells))
 	copy(previous, cells)
 	for i := range previous {
-		var left rune
-		var center rune
-		var right rune
+		var left int
+		var center int
+		var right int
 		/* Special cases */
 		if i == 0 {
 			left = previous[len(previous)-1]
@@ -73,21 +73,23 @@ func update(cells []rune) {
 	}
 }
 
-func applyRule(left, center, right rune) rune{
-	a := string(alive)
-	d := string(dead)
-	state := alive
-	pattern := string(string(left) + string(center) + string(right))
+func applyRule(left, center, right int) int{
+	state := 1
+	pattern := fmt.Sprintf("%d%d%d", left,center,right)
 	switch pattern {
-	case string(a+a+a), string(a+d+d), string(d+d+d):
-		state = dead
+	case "111", "100", "000":
+		state = 0
 	}
 	return state
 }
 
-func printLine(cells []rune) {
+func printLine(cells []int) {
 	for _,value := range cells {
-		fmt.Print(string(value))
+		symbol := dead
+		if value == 1 {
+			symbol = alive
+		}
+		fmt.Print(string(symbol))
 	}
 	fmt.Print("\n")
 }
