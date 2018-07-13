@@ -7,45 +7,37 @@ import (
 	"time"
 	"strconv"
 	"os"
+	"strings"
+	"log"
 )
-
-type cell struct {
-	left int
-	center int
-	right int
-}
 
 const alive = 'X'
 const dead = ' '
 
-
-/* Patterns in sequence */
-var patterns = []string{"111","110","101","100","011","010","001","000"}
-var rule int64
-
-/* Empty table with pattern as key and the value as state */
-var table = map[string]uint8 {
-	"111":0,
-	"110":0,
-	"101":0,
-	"100":0,
-	"011":0,
-	"010":0,
-	"001":0,
-	"000":0,
+type transitionRule struct {
+	configuration string
+	state rune
 }
+
+/* Rules */
+var rules [8]transitionRule
+
+/* Wolfram Code */
+var ruleNumber int
+
+
 
 func main() {
 	iterations := flag.Int("iterations", 20, "number of iterations")
-	flag.Int64Var(&rule,"rule", 110, "rule number")
+	flag.IntVar(&ruleNumber,"rule", 110, "rule number")
 	cells := flag.Int("cells", 32, "number of cells")
 	flag.Parse()
-	if rule < 0 || rule > 255 {
-		fmt.Println("Invalid rule number")
+	if ruleNumber < 0 || ruleNumber > 255 {
+		log.Fatal(fmt.Sprintf("Invalid rule number %d", ruleNumber))
 		os.Exit(1)
 	}
-	table = populateTable(rule)
-	cellLine := make([]uint8, *cells, *cells)
+	populateTable(ruleNumber)
+	cellLine := make([]rune, *cells, *cells)
 	i := 0
 	initialize(cellLine)
 	printLine(cellLine)
@@ -60,27 +52,27 @@ func main() {
 
 }
 
-func initialize(cells []uint8) {
+func initialize(cells []rune) {
 	seed := rand.NewSource(time.Now().UnixNano())
 	randomiser := rand.New(seed)
 	for i := range cells {
 		state := randomiser.Intn(2)
 		if state == 0 {
-			cells[i] = 0
+			cells[i] = dead
 		} else {
-			cells[i] = 1
+			cells[i] = alive
 		}
 	}
 }
 
-func update(cells []uint8) {
+func update(cells []rune) {
 
-	previous := make([]uint8, len(cells), cap(cells))
+	previous := make([]rune, len(cells), cap(cells))
 	copy(previous, cells)
 	for i := range previous {
-		var left uint8
-		var center uint8
-		var right uint8
+		var left rune
+		var center rune
+		var right rune
 		/* Special cases */
 		if i == 0 {
 			left = previous[len(previous)-1]
@@ -93,36 +85,52 @@ func update(cells []uint8) {
 			right = previous[i+1]
 		}
 		center = previous[i]
-		pattern := fmt.Sprintf("%d%d%d", left,center,right)
-		cells[i] = table[pattern]
+		pattern := fmt.Sprintf("%s%s%s", string(left),string(center),string(right))
+		rule := rules[toInt(pattern)]
+		cells[i] = rule.state
 	}
 }
 
 
-func printLine(cells []uint8) {
+func printLine(cells []rune) {
 	for _,value := range cells {
-		symbol := dead
-		if value == 1 {
-			symbol = alive
-		}
-		fmt.Print(string(symbol))
+		fmt.Print(string(value))
 	}
 	fmt.Print("\n")
 }
 
 
-func populateTable(rule int64) map[string]uint8 {
+func populateTable(ruleNumber int) {
 
-	/* Generate the rule as a binary string */
-	binaryString := fmt.Sprintf("%08s",strconv.FormatInt(rule,2))
-	for i := 0; i < len(binaryString); i++ {
-		value := rune(binaryString[i])
-		if value == '1' {
-			table[patterns[i]] = 1
-		}
+	/* Generate the states as a binary string */
+	binaryString := toString(ruleNumber, 8)
+	for i := range rules {
+		pattern := toString(i, 3)
+		state := binaryString[(len(binaryString)-i)-1]
+		rule := transitionRule{pattern, rune(state)}
+		rules[i] = rule
 	}
-	return table
+
 }
 
+func toString(integer int, len int) string {
+	binary := fmt.Sprintf("%0[1]*s",len,strconv.FormatInt(int64(integer),2))
+	firstRound := strings.Replace(binary, "1", string(alive),-1)
+	secondRound := strings.Replace(firstRound, "0", string(dead), -1)
+	return secondRound
+}
+
+func toInt(pattern string) int {
+	firstRound := strings.Replace(pattern, string(alive), "1",-1)
+	binary := strings.Replace(firstRound, string(dead), "0", -1)
+
+	value,err := strconv.ParseInt(binary,2,32)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Could not convert pattern %s to int", binary))
+		os.Exit(99)
+	}
+	return int(value)
+
+}
 
 
