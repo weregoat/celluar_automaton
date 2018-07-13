@@ -7,20 +7,15 @@ import (
 	"time"
 	"strconv"
 	"os"
-	"strings"
 	"log"
 )
 
-const alive = 'X'
-const dead = ' '
+const aliveStatus = '1'
+const deadStatus = '0'
 
-type transitionRule struct {
-	configuration string
-	state rune
-}
 
 /* Rules */
-var rules [8]transitionRule
+var transitionRules map [string]rune
 
 /* Wolfram Code */
 var ruleNumber int
@@ -31,20 +26,22 @@ func main() {
 	iterations := flag.Int("iterations", 20, "number of iterations")
 	flag.IntVar(&ruleNumber,"rule", 110, "rule number")
 	cells := flag.Int("cells", 32, "number of cells")
+	deadSymbol := flag.String("dead", string(deadStatus), "Symbol representing dead cells")
+	aliveSymbol := flag.String("alive", string(aliveStatus), "Symbol representing living cells")
 	flag.Parse()
 	if ruleNumber < 0 || ruleNumber > 255 {
 		log.Fatal(fmt.Sprintf("Invalid rule number %d", ruleNumber))
 		os.Exit(1)
 	}
-	populateTable(ruleNumber)
+	transitionRules = createTransitionRules(ruleNumber)
 	cellLine := make([]rune, *cells, *cells)
 	i := 0
 	initialize(cellLine)
-	printLine(cellLine)
+	printLine(cellLine, *aliveSymbol, *deadSymbol)
 	i++
 	for i < *iterations {
 		update(cellLine)
-		printLine(cellLine)
+		printLine(cellLine, *aliveSymbol, *deadSymbol)
 		i++
 	}
 
@@ -58,9 +55,9 @@ func initialize(cells []rune) {
 	for i := range cells {
 		state := randomiser.Intn(2)
 		if state == 0 {
-			cells[i] = dead
+			cells[i] = deadStatus
 		} else {
-			cells[i] = alive
+			cells[i] = aliveStatus
 		}
 	}
 }
@@ -86,51 +83,44 @@ func update(cells []rune) {
 		}
 		center = previous[i]
 		pattern := fmt.Sprintf("%s%s%s", string(left),string(center),string(right))
-		rule := rules[toInt(pattern)]
-		cells[i] = rule.state
+		cells[i] = transitionRules[pattern]
 	}
 }
 
 
-func printLine(cells []rune) {
-	for _,value := range cells {
-		fmt.Print(string(value))
+func printLine(cells []rune, aliveSymbol, deadSymbol string) {
+	for i,value := range cells {
+		if value == deadStatus {
+			fmt.Print(deadSymbol)
+		} else if value == aliveStatus {
+			fmt.Print(aliveSymbol)
+		} else {
+			log.Fatal(fmt.Sprintf("Unknown cell status %s at position %d", string(value), i+1))
+			os.Exit(1)
+		}
 	}
-	fmt.Print("\n")
+	fmt.Println()
 }
 
 
-func populateTable(ruleNumber int) {
+func createTransitionRules(ruleNumber int) map[string]rune {
 
-	/* Generate the states as a binary string */
+	table := make(map[string]rune) // For testing purpose
 	binaryString := toString(ruleNumber, 8)
-	for i := range rules {
+	for i:= 7; i >= 0; i-- {
 		pattern := toString(i, 3)
-		state := binaryString[(len(binaryString)-i)-1]
-		rule := transitionRule{pattern, rune(state)}
-		rules[i] = rule
+		state := binaryString[7-i]
+		table[pattern] = rune(state)
 	}
+	return table
 
 }
 
+/* Returns the len string representation of an int as a binary*/
 func toString(integer int, len int) string {
-	binary := fmt.Sprintf("%0[1]*s",len,strconv.FormatInt(int64(integer),2))
-	firstRound := strings.Replace(binary, "1", string(alive),-1)
-	secondRound := strings.Replace(firstRound, "0", string(dead), -1)
-	return secondRound
+	return fmt.Sprintf("%0[1]*s",len,strconv.FormatInt(int64(integer),2))
 }
 
-func toInt(pattern string) int {
-	firstRound := strings.Replace(pattern, string(alive), "1",-1)
-	binary := strings.Replace(firstRound, string(dead), "0", -1)
 
-	value,err := strconv.ParseInt(binary,2,32)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Could not convert pattern %s to int", binary))
-		os.Exit(99)
-	}
-	return int(value)
-
-}
 
 
