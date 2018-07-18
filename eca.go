@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"os"
 	"log"
+	"strings"
 )
 
 const aliveStatus = '1'
@@ -28,6 +29,7 @@ func main() {
 	cells := flag.Int("cells", 32, "number of cells")
 	deadSymbol := flag.String("dead", string(deadStatus), "Symbol representing dead cells")
 	aliveSymbol := flag.String("alive", string(aliveStatus), "Symbol representing living cells")
+	seed := flag.String("seed", "", "String representing the first cell line")
 	flag.Parse()
 	if ruleNumber < 0 || ruleNumber > 255 {
 		log.Fatal(fmt.Sprintf("Invalid rule number %d", ruleNumber))
@@ -35,8 +37,12 @@ func main() {
 	}
 	transitionRules = createTransitionRules(ruleNumber)
 	cellLine := make([]rune, *cells, *cells)
+	if len(*seed) > 0 {
+		parseSeed(*seed, *deadSymbol, *aliveSymbol, *cells, cellLine)
+	} else {
+		initialize(cellLine)
+	}
 	i := 0
-	initialize(cellLine)
 	printLine(cellLine, *aliveSymbol, *deadSymbol)
 	i++
 	for i < *iterations {
@@ -119,6 +125,32 @@ func createTransitionRules(ruleNumber int) map[string]rune {
 /* Returns the len string representation of an int as a binary*/
 func toString(integer int, len int) string {
 	return fmt.Sprintf("%0[1]*s",len,strconv.FormatInt(int64(integer),2))
+}
+
+func parseSeed(seed, dead, live string, length int, line []rune) {
+	/* Check that no alive and dead symbols align with the seed */
+	/* Replace all dead or alive symbols within the string */
+	emptyLine := strings.Replace(strings.Replace(seed, live, "", -1), dead, "", -1)
+	if len(emptyLine) > 0 {
+		log.Fatal(fmt.Sprintf("Invalid symbols in seed: %s", emptyLine))
+		os.Exit(1)
+	}
+	if len(seed) > length {
+		log.Fatal(fmt.Sprintf("Seed line is too long"))
+		os.Exit(1)
+	}
+	/* Pad the string to length */
+	padding := strings.Repeat(dead, length - len(seed))
+	cellLine := fmt.Sprintf("%s%s",padding, seed)
+	/* Insert the elements into the rune array */
+	for i,v := range cellLine {
+		if string(v) == dead {
+			line[i] = deadStatus
+		} else {
+			line[i] = aliveStatus
+		}
+	}
+
 }
 
 
