@@ -30,12 +30,18 @@ func main() {
 	deadSymbol := flag.String("dead", string(deadStatus), "Symbol representing dead cells")
 	aliveSymbol := flag.String("alive", string(aliveStatus), "Symbol representing living cells")
 	seed := flag.String("seed", "", "String representing the first cell line")
+	printRule := flag.Bool("header", false, "Print an header with the rule's configurations")
 	flag.Parse()
+	checkSymbol(*deadSymbol)
+	checkSymbol(*aliveSymbol)
 	if ruleNumber < 0 || ruleNumber > 255 {
 		log.Fatal(fmt.Sprintf("Invalid rule number %d", ruleNumber))
 		os.Exit(1)
 	}
 	transitionRules = createTransitionRules(ruleNumber)
+	if *printRule {
+		printHeader(*aliveSymbol, *deadSymbol)
+	}
 	cellLine := make([]rune, *cells, *cells)
 	if len(*seed) > 0 {
 		parseSeed(*seed, *deadSymbol, *aliveSymbol, *cells, cellLine)
@@ -97,9 +103,9 @@ func update(cells []rune) {
 func printLine(cells []rune, aliveSymbol, deadSymbol string) {
 	for i,value := range cells {
 		if value == deadStatus {
-			fmt.Print(deadSymbol)
+			fmt.Print(convert(value, deadSymbol, aliveSymbol))
 		} else if value == aliveStatus {
-			fmt.Print(aliveSymbol)
+			fmt.Print(convert(value, deadSymbol, aliveSymbol))
 		} else {
 			log.Fatal(fmt.Sprintf("Unknown cell status %s at position %d", string(value), i+1))
 			os.Exit(1)
@@ -153,6 +159,39 @@ func parseSeed(seed, dead, live string, length int, line []rune) {
 
 }
 
+/* To Hell with finesse, just plain string manipulation */
+func printHeader(aliveSymbol, deadSymbol string) {
+	configurations := ""
+	transformations := ""
+	for i := 7; i >= 0; i-- {
+		pattern := toString(i, 3)
+		configurations = fmt.Sprintf("%s|%s", configurations, pattern)
+		transformations = fmt.Sprintf("%s| %s ", transformations, string(transitionRules[pattern])) // Because of input restrictions only one char string for symbols
+	}
+	configurations = fmt.Sprintf("%s|\n", configurations)
+	transformations = fmt.Sprintf("%s|\n\n", transformations)
+	configurations = strings.Replace(configurations, string(deadStatus), deadSymbol, -1)
+	fmt.Print(strings.Replace(configurations, string(aliveStatus), aliveSymbol, -1))
+	transformations = strings.Replace(transformations, string(deadStatus), deadSymbol, -1)
+	fmt.Print(strings.Replace(transformations, string(aliveStatus), aliveSymbol, -1))
 
 
+}
 
+func convert(symbol rune, deadSymbol, aliveSymbol string) string {
+	var converted string
+	if symbol == deadStatus {
+		converted = deadSymbol
+	} else if symbol == aliveStatus {
+		converted = aliveSymbol
+	}
+	return converted
+}
+
+func checkSymbol(symbol string) {
+	runes := []rune(symbol)
+	if len(runes) > 1 {
+		fmt.Printf("Invalid symbol %s; length should be one character", symbol)
+		os.Exit(1)
+	}
+}
