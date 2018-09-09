@@ -21,21 +21,33 @@ def main():
                         action="store", nargs="?", default=10, type=int,
                         help="Number of cells", metavar="N"
                         )
+    parser.add_argument("-l", "--live",
+                        action="store", nargs="?", default=ALIVE, type=str,
+                        help="Character to use for live cells", metavar="C"
+                        )
+    parser.add_argument("-d", "--dead",
+                        action="store", nargs="?", default=DEAD, type=str,
+                        help="Character to use for dead cells", metavar="C"
+                        )
+    parser.add_argument("-f", "--first",
+                        action="store", nargs="?", type=str,
+                        help="First generation"
+                        )
     args = parser.parse_args()
     print(args)
+    args_check(args)
     rule_number = args.rule_number
     iterations = args.iterations
     cells = args.cells
-    current_generation = ""
+    current_generation = args.first
+    current_generation = current_generation.replace(args.dead, DEAD)
+    current_generation = current_generation.replace(args.live, ALIVE)
+    if len(current_generation) < cells:
+        current_generation = current_generation.rjust(cells, DEAD)
     rule_set = build_ruleset(rule_number)
-    print(rule_set)
-    # Generate first cell line */
-    for cell in range(0, cells):
-        current_generation += str(randrange(2))
-    print(current_generation)
-    for generation in range(1, cells):
+    for generation in range(0, iterations):
+        print_line(current_generation, args.dead, args.live)
         current_generation = update(current_generation, rule_set)
-        print(current_generation)
 
 
 def string_to_int(string):
@@ -62,6 +74,63 @@ def update(cell_line, ruleset):
         pattern = cell_line[left] + cell_line[position] + cell_line[right]
         new_line += ruleset[pattern]
     return new_line
+
+
+def args_check(args):
+    good = True
+
+    if args.dead is None:
+        args.dead = DEAD
+    if args.live is None:
+        args.live = ALIVE
+    if args.first is None:
+        args.first = generate(args.dead, args.live, args.cells)
+
+    # Check rule between 0 and 255
+    if args.rule_number > 255 or args.rule_number < 0:
+        good = False
+        print("Rule number should be between 0 and 255")
+    # Check first generation is consistent with symbols and number of cells
+    if len(args.first) > args.cells or len(args.first) == 0:
+        good = False
+        print("Invalid number of cells for first generation")
+    # Check symbols of status have len 1
+    if len(args.dead) != 1 or len(args.live) != 1:
+        good = False
+        print("Symbol for status should be one character long")
+    # Check symbols are not the one used already for the opposite status
+    if args.dead == ALIVE or args.live == DEAD:
+        good = False
+        print("Invalid symbol for status")
+    # Check first generation is consistent with symbols
+    # By removing the dead and alive symbol and making sure the
+    # resulting string is empty
+    line = args.first
+    no_dead = line.replace(args.dead, "")
+    no_live = no_dead.replace(args.live, "")
+    if len(no_live) != 0:
+        good = False
+        print("Invalid symbol in first generation")
+    if not good:
+        exit(99)
+
+
+def generate(dead, alive, cells):
+    first_generation = ""
+    # Generate first cell line */
+    for cell in range(0, cells):
+        status = dead
+        if randrange(2) == 1:
+            status = alive
+        first_generation += status
+    return first_generation
+
+
+def print_line(line, dead, alive):
+    line = line.replace(DEAD, dead)
+    line = line.replace(ALIVE, alive)
+    print(line)
+
 
 if __name__ == "__main__":
     main()
